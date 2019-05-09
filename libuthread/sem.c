@@ -10,7 +10,7 @@ struct semaphore {
 	int count;
 	queue_t waiting;
 
-} Semaphore;
+};
 
 sem_t sem_create(size_t count)
 {
@@ -19,7 +19,7 @@ sem_t sem_create(size_t count)
 		return NULL;
 	}
 	sem->count = count;
-	queue_create（sem->waiting);
+	sem->waiting = queue_create();
 	return sem;
 }
 
@@ -49,11 +49,17 @@ int sem_down(sem_t sem)
 	if(sem == NULL){
 		return -1;
 	}
-	sem->count -= 1;
+    
+    enter_critical_section();
 	while (sem->count == 0) {
-		enter_critical_section();   //???
+        pthread_t TID = pthread_self();
+        queue_enqueue(waiting, (void*)TID); //
 		thread_block();
 	}
+    sem->count -= 1;
+    exit_critical_section();
+    
+    return 0;
 	
 }
 
@@ -69,7 +75,18 @@ spinlock_release(sem->lock);
 
 int sem_up(sem_t sem)
 {
-	
+    if(sem == NULL){
+        return -1;
+    }
+    pthread_t tempTID;
+    enter_critical_section();
+    if(queue_length(sem->waiting)>0){
+        sem->count += 1;
+        queue_dequeue(sem->waiting, (void**)&tempTID);
+        thread_unblock(tempTID);
+    }
+    exit_critical_section();
+    return 0;
 }
 
 /*
@@ -92,13 +109,16 @@ int sem_getvalue(sem_t sem, int *sval)
 	if(sem == NULL || sval == NULL){
 		return -1;
 	}
+    
+    enter_critical_section();
 	if(sem->count > 0){
 		sval = sem->count;
 	}
 	else if (sem->count == 0){
-		sval = -(queue_length(sem->waiting));  //??
+		sval = -1*(queue_length(sem->waiting));
 	}
-
+    exit_critical_section();
+    
 	return 0;
 }
 
