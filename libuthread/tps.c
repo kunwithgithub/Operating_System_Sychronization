@@ -20,6 +20,18 @@ struct TPS{
 	void *privateMemoryPage; 
 };
 
+int find_item(void *data, void *arg)
+{
+    pthread_t tid = (*(pthread_t*)arg);
+  
+    if (tid == ((struct TPS*)data)->tid)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
 int tps_init(int segv)
 {
 	/* TODO: Phase 2 */
@@ -40,17 +52,6 @@ int tps_create(void)
 	return 0;
 }
 
-int find_item(void *data, void *arg)
-{
-    pthread_t tid = (*(pthread_t*)arg);
-  
-    if (tid == ((struct TPS*)data)->tid)
-    {
-        return 1;
-    }
-
-    return 0;
-}
 
 int tps_destroy(void)
 {
@@ -58,8 +59,8 @@ int tps_destroy(void)
 	phread_t currentTid;
 	currentTid = pthread_self();
 	struct TPS *currentTPS;
-	queue_iterate(TPSs,find_item,(void *)currentTid,currentTPS);
-	if(currentTPS==NULL){
+	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentTPS);
+	if(currentTPS==NULL||success==-1){
 		return -1;
 	}
 	munmap(currentTPS->privateMemoryPage,TPS_SIZE);
@@ -81,4 +82,18 @@ int tps_write(size_t offset, size_t length, char *buffer)
 int tps_clone(pthread_t tid)
 {
 	/* TODO: Phase 2 */
+	pthread_t currentTid = pthread_self();
+	struct TPS *willBeCloned;
+	struct TPS *currentThread;
+	int sucess = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
+	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
+	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL||willBeCloned==NULL){
+		return -1;
+	}
+	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
+	newTPS->tid = currentTid;
+	newTPS->privateMemoryPage = mmap(NULL,TPS_SIZE,PROT_EXEC|PROT_READ|PROT_WRITE,-1,queueSize*TPS_SIZE);
+	memcpy(newTPS->privateMemoryPage,willBeCloned->privateMemoryPage,TPS_SIZE);
+	queue_enqueue(newTPS);
+	
 }
