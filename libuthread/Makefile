@@ -1,6 +1,7 @@
 # Target library
 lib := libuthread.a
-objs := queue.o thread.o sem.o
+default_objs := queue.o thread.o
+objs := $(default_objs) sem.o
 
 CC := gcc
 CFLAGS := -Wall -Werror
@@ -30,4 +31,4 @@ libuthread.a: $(objs)
 
 clean:
 	@echo "clean"
-	$(Q)rm -f $(lib) $(filter-out queue.o thread.o, $(objs)) $(deps)
+	$(Q)rm -f $(lib) $(filter-out $(default_objs), $(objs)) $(deps)
