@@ -91,6 +91,7 @@ int tps_clone(pthread_t tid)
 		return -1;
 	}
 	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
+	int queueSize = queue_length(TPSs);
 	newTPS->tid = currentTid;
 	newTPS->privateMemoryPage = mmap(NULL,TPS_SIZE,PROT_EXEC|PROT_READ|PROT_WRITE,-1,queueSize*TPS_SIZE);
 	memcpy(newTPS->privateMemoryPage,willBeCloned->privateMemoryPage,TPS_SIZE);
