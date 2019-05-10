@@ -13,32 +13,59 @@
 #include "tps.h"
 
 /* TODO: Phase 2 */
-queue_t tids;
+queue_t TPSs;
 
 struct TPS{
 	pthread_t tid;
+	void *privateMemoryPage; 
 };
 
 int tps_init(int segv)
 {
 	/* TODO: Phase 2 */
-	tids = queue_create();
+	TPSs = queue_create();
 }
 
 int tps_create(void)
 {
 	/* TODO: Phase 2 */
-	int queueSize = queue_length(tids);
-	struct TPS *newTPS = (struct TPS*)mmap(NULL,TPS_SIZE,PROT_EXEC|PROT_READ|PROT_WRITE,-1,queueSize*TPS_SIZE); 
+	int queueSize = queue_length(TPSs);
+	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
 	if(newTPS == (void*)-1){
 		return -1;
 	}
+	newTPS->privateMemoryPage = mmap(NULL,TPS_SIZE,PROT_EXEC|PROT_READ|PROT_WRITE,-1,queueSize*TPS_SIZE);
+	newTPS->tid = pthread_self();
+	queue_enqueue(newTPS);
 	return 0;
+}
+
+int find_item(void *data, void *arg)
+{
+    pthread_t tid = (*(pthread_t*)arg);
+  
+    if (tid == ((struct TPS*)data)->tid)
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 int tps_destroy(void)
 {
 	/* TODO: Phase 2 */
+	phread_t currentTid;
+	currentTid = pthread_self();
+	struct TPS *currentTPS;
+	queue_iterate(TPSs,find_item,(void *)currentTid,currentTPS);
+	if(currentTPS==NULL){
+		return -1;
+	}
+	munmap(currentTPS->privateMemoryPage,TPS_SIZE);
+	queue_delete(TPSs,currentTPS);
+	free(currentTPS);
+	return 0;
 }
 
 int tps_read(size_t offset, size_t length, char *buffer)
