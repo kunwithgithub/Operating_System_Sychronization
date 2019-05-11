@@ -41,7 +41,7 @@ int find_fault(void *data, void *arg)
 {
 	
   
-    if (arg == ((struct TPS*)data)->privateMemoryPage)
+    if (arg == ((struct TPS*)data)->privateMemoryPage->pageAddress)
     {
         return 1;
     }
@@ -131,6 +131,7 @@ int tps_destroy(void)
 	}
 	munmap(currentTPS->privateMemoryPage->pageAddress,sizeof(struct page));
 	queue_delete(TPSs,currentTPS);
+	free(currentTPS->privateMemoryPage);
 	free(currentTPS);
 	return 0;
 }
@@ -175,7 +176,7 @@ int tps_clone(pthread_t tid)
 	struct TPS *currentThread;
 	int success = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
 	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL||willBeCloned==NULL){
+	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL){
 		return -1;
 	}
 	/*	phase 2
