@@ -22,6 +22,7 @@ struct TPS{
 
 struct page{
 	void *pageAddress; // phase 3
+	int referenceNumber;
 }
 
 int find_item(void *data, void *arg)
