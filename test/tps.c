@@ -154,7 +154,7 @@ int tps_write(size_t offset, size_t length, char *buffer)
 	/* TODO: Phase 2 */
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThreadTPS;
-	int sucess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThreadTPS);
+	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThreadTPS);
 	if(success == -1 || currentThreadTPS == NULL||offset+length>TPS_SIZE||buffer == NULL){
 		return -1;
 	}
@@ -173,21 +173,22 @@ int tps_clone(pthread_t tid)
 	pthread_t currentTid = pthread_self();
 	struct TPS *willBeCloned;
 	struct TPS *currentThread;
-	int sucess = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
+	int success = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
 	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
 	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL||willBeCloned==NULL){
 		return -1;
 	}
+	/*	phase 2
 	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
 	int queueSize = queue_length(TPSs);
 	newTPS->tid = currentTid;
-	/*	phase 2
+	
 	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page);
 	newTPS->privateMemoryPage->pageAddress = mmap(NULL,sizeof(struct page),PROT_EXEC|PROT_READ|PROT_WRITE,MAP_ANONYMOUS,-1,0);
 	memcpy(newTPS,willBeCloned,TPS_SIZE);
 	*/
-	newTPS->privateMemoryPage = willBeCloned->privateMemoryPage; //phase 3
-	newTPS->privateMemoryPage->referenceNumber++; //phase 3
+	currentThread->privateMemoryPage = willBeCloned->privateMemoryPage; //phase 3
+	currentThread->privateMemoryPage->referenceNumber++; //phase 3
 	queue_enqueue(newTPS);
 	return 0;
 }
