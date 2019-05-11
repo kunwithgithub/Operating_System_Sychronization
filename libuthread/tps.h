@@ -1,190 +1,94 @@
-#include <assert.h>
-#include <pthread.h>
-#include <signal.h>
+#ifndef _TPS_H
+#define _TPS_H
+
+ #include <pthread.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <unistd.h>
+#include <sys/types.h>
 
-#include "queue.h"
-#include "thread.h"
-#include "tps.h"
+ /*
+ * Size of a TPS area in bytes
+ */
+#define TPS_SIZE 4096
 
-/* TODO: Phase 2 */
-queue_t TPSs;
+ /*
+ * tps_init - Initialize TPS
+ * @segv - Activate segfault handler
+ *
+ * Initialize TPS API. This function should only be called once by the client
+ * application. If @segv is different than 0, the TPS API should install a
+ * page fault handler that is able to recognize TPS protection errors and
+ * display the message "TPS protection error!\n" on stderr.
+ *
+ * Return: -1 if TPS API has already been initialized, or in case of failure
+ * during the initialization. 0 if the TPS API was successfully initialized.
+ */
+int tps_init(int segv);
 
-struct TPS{
-	pthread_t tid;
-	struct page *privateMemoryPage; 
-};
+ /*
+ * tps_create - Create TPS
+ *
+ * Create a TPS area and associate it to the current thread.
+ *
+ * Return: -1 if current thread already has a TPS, or in case of failure during
+ * the creation (e.g. memory allocation). 0 if the TPS area was successfully
+ * created.
+ */
+int tps_create(void);
 
-struct page{
-	void *pageAddress; // phase 3
-	int referenceNumber;
-};
+ /*
+ * tps_destroy - Destroy TPS
+ *
+ * Destroy the TPS area associated to the current thread.
+ *
+ * Return: -1 if current thread doesn't have a TPS. 0 if the TPS area was
+ * successfully destroyed.
+ */
+int tps_destroy(void);
 
-int find_item(void *data, void *arg)
-{
-    pthread_t tid = (*(pthread_t*)arg);
-  
-    if (tid == ((struct TPS*)data)->tid)
-    {
-        return 1;
-    }
+ /*
+ * tps_read - Read from TPS
+ * @offset: Offset where to read from in the TPS
+ * @length: Length of the data to read
+ * @buffer: Data buffer receiving the read data
+ *
+ * Read @length bytes of data from the current thread's TPS at byte offset
+ * @offset into data buffer @buffer.
+ *
+ * Return: -1 if current thread doesn't have a TPS, or if the reading operation
+ * is out of bound, or if @buffer is NULL, or in case of internal failure. 0 if
+ * the TPS was successfully read from.
+ */
+int tps_read(size_t offset, size_t length, char *buffer);
 
-    return 0;
-}
+ /*
+ * tps_write - Write to TPS
+ * @offset: Offset where to write to in the TPS
+ * @length: Length of the data to write
+ * @buffer: Data buffer holding the data to be written
+ *
+ * Write @length bytes located in data buffer @buffer into the current thread's
+ * TPS at byte offset @offset.
+ *
+ * If the current thread's TPS shares a memory page with another thread's TPS,
+ * this should trigger a copy-on-write operation before the actual write occurs.
+ *
+ * Return: -1 if current thread doesn't have a TPS, or if the writing operation
+ * is out of bound, or if @buffer is NULL, or in case of failure. 0 if the TPS
+ * was successfully written to.
+ */
+int tps_write(size_t offset, size_t length, char *buffer);
 
-int find_fault(void *data, void *arg)
-{
-	
-  
-    if (arg == ((struct TPS*)data)->privateMemoryPage)
-    {
-        return 1;
-    }
+ /*
+ * tps_clone - Clone TPS
+ * @tid: TID of the thread to clone
+ *
+ * Clone thread @tid's TPS. In the first phase, the cloned TPS's content should
+ * copied directly. In the last phase, the new TPS should not copy the cloned
+ * TPS's content but should refer to the same memory page.
+ *
+ * Return: -1 if thread @tid doesn't have a TPS, or if current thread already
+ * has a TPS, or in case of failure. 0 is TPS was successfully cloned.
+ */
+int tps_clone(pthread_t tid);
 
-    return 0;
-	
-}
-
-static void segv_handler(int sig, siginfo_t *si, void *context)
-{
-    /*
-     * Get the address corresponding to the beginning of the page where the
-     * fault occurred
-     */
-    void *p_fault = (void*)((uintptr_t)si->si_addr & ~(TPS_SIZE - 1));
-
-    /*
-     * Iterate through all the TPS areas and find if p_fault matches one of them
-     */
-	struct TPS *foundTPS;
-	int match = queue_iterate(TPSs,find_fault,p_fault,(void **)&foundTPS);
-    if (match != -1){
-        /* Printf the following error message */
-		if(foundTPS != NULL){
-			fprintf(stderr, "TPS protection error!\n");
-		}
-	}
-    /* In any case, restore the default signal handlers */
-    signal(SIGSEGV, SIG_DFL);
-    signal(SIGBUS, SIG_DFL);
-    /* And transmit the signal again in order to cause the program to crash */
-    raise(sig);
-}
-
-int tps_init(int segv)
-{
-	/* TODO: Phase 2 */
-	if(TPSs != NULL){
-		return -1;
-	}
-	
-	TPSs = queue_create();
-	
-	if(TPSs == NULL){
-		return -1;
-	}
-	if (segv) {
-        struct sigaction sa;
-
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = SA_SIGINFO;
-        sa.sa_sigaction = segv_handler;
-        sigaction(SIGBUS, &sa, NULL);
-        sigaction(SIGSEGV, &sa, NULL);
-    }
-
-	return 0;
-}
-
-int tps_create(void)
-{
-	/* TODO: Phase 2 */
-	int queueSize = queue_length(TPSs);
-	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
-	if(newTPS == (void*)-1){
-		return -1;
-	}
-	
-	struct page *newPage = mmap(NULL,sizeof(struct page),PROT_NONE,MAP_ANONYMOUS,-1,0);
-	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page));	
-	newTPS->privateMemoryPage->pageAddress = newPage;
-	newTPS->tid = pthread_self();
-	queue_enqueue(newTPS);
-	return 0;
-}
-
-
-int tps_destroy(void)
-{
-	/* TODO: Phase 2 */
-	phread_t currentTid;
-	currentTid = pthread_self();
-	struct TPS *currentTPS;
-	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentTPS);
-	if(currentTPS==NULL||success==-1){
-		return -1;
-	}
-	munmap(currentTPS->privateMemoryPage->pageAddress,sizeof(struct page));
-	queue_delete(TPSs,currentTPS);
-	free(currentTPS);
-	return 0;
-}
-
-int tps_read(size_t offset, size_t length, char *buffer)
-{
-	/* TODO: Phase 2 */
-	pthread_t currentTid = pthread_self();
-	struct TPS *currentThread;
-	int sucess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-	if(success == -1 || currentThread == NULL||offset+length>TPS_SIZE||buffer == NULL){
-		return -1;
-	}
-	mprotect(currentThread->privateMemoryPage->pageAddress,sizeof(struct page),PROT_READ);
-	memcpy((void *)buffer, currentThread+offset,length);
-	return 0;
-}
-
-int tps_write(size_t offset, size_t length, char *buffer)
-{
-	/* TODO: Phase 2 */
-	pthread_t currentTid = pthread_self();
-	struct TPS *currentThread;
-	int sucess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-	if(success == -1 || currentThread == NULL||offset+length>TPS_SIZE||buffer == NULL){
-		return -1;
-	}
-	mprotect(currentThread->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
-	memcpy(currentThread+offset,(void *)buffer,length);
-	
-	return 0;
-}
-
-int tps_clone(pthread_t tid)
-{
-	/* TODO: Phase 2 */
-	pthread_t currentTid = pthread_self();
-	struct TPS *willBeCloned;
-	struct TPS *currentThread;
-	int sucess = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
-	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL||willBeCloned==NULL){
-		return -1;
-	}
-	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
-	int queueSize = queue_length(TPSs);
-	newTPS->tid = currentTid;
-	/*	phase 2
-	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page);
-	newTPS->privateMemoryPage->pageAddress = mmap(NULL,sizeof(struct page),PROT_EXEC|PROT_READ|PROT_WRITE,MAP_ANONYMOUS,-1,0);
-	memcpy(newTPS,willBeCloned,TPS_SIZE);
-	*/
-	newTPS->privateMemoryPage = willBeCloned->privateMemoryPage; //phase 3
-	newTPS->privateMemoryPage->referenceNumber = newTPS->privateMemoryPage->referenceNumber + 1; //phase 3
-	queue_enqueue(newTPS);
-	return 0;
-}
+ #endif /* _TPS_H */
