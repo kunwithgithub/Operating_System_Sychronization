@@ -146,7 +146,7 @@ int tps_read(size_t offset, size_t length, char *buffer)
 		return -1;
 	}
 	mprotect(currentThread->privateMemoryPage->pageAddress,sizeof(struct page),PROT_READ);
-	memcpy((void *)buffer, currentThread+offset,length);
+	memcpy((void *)buffer, currentThread->privateMemoryPage->pageAddress+offset,length);
 	return 0;
 }
 
@@ -162,9 +162,14 @@ int tps_write(size_t offset, size_t length, char *buffer)
 	if(currentThreadTPS->privateMemoryPage->referenceNumber>1){
 		struct page *newPage = mmap(NULL,sizeof(struct page),PROT_NONE,MAP_ANONYMOUS,-1,0);
 		memcpy(newPage,currentThreadTPS,sizeof(struct page));
+		currentThreadTPS->privateMemoryPage->referenceNumber--;
+		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_NONE);
+		currentThreadTPS->privateMemoryPage->pageAddress = newPage;
+		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
+		
 	}
 	mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
-	memcpy(currentThreadTPS+offset,(void *)buffer,length);
+	memcpy(currentThreadTPS->privateMemoryPage->pageAddress+offset,(void *)buffer,length);
 	
 	return 0;
 }
