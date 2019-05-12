@@ -104,7 +104,6 @@ int tps_init(int segv)
 int tps_create(void)
 {
 	/* TODO: Phase 2 */
-	int queueSize = queue_length(TPSs);
 	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
 	if(newTPS == (void*)-1){
 		return -1;
@@ -115,7 +114,7 @@ int tps_create(void)
 	newTPS->privateMemoryPage->pageAddress = newPage;
 	newTPS->privateMemoryPage->referenceNumber = 1;
 	newTPS->tid = pthread_self();
-	queue_enqueue(newTPS);
+	queue_enqueue(TPSs,(void*)newTPS);
 	return 0;
 }
 
@@ -123,7 +122,7 @@ int tps_create(void)
 int tps_destroy(void)
 {
 	/* TODO: Phase 2 */
-	phread_t currentTid;
+	pthread_t currentTid;
 	currentTid = pthread_self();
 	struct TPS *currentTPS;
 	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentTPS);
@@ -142,7 +141,7 @@ int tps_read(size_t offset, size_t length, char *buffer)
 	/* TODO: Phase 2 */
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThread;
-	int sucess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
+	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
 	if(success == -1 || currentThread == NULL||offset+length>TPS_SIZE||buffer == NULL){
 		return -1;
 	}
@@ -165,7 +164,7 @@ int tps_write(size_t offset, size_t length, char *buffer)
 		memcpy(newPage,currentThreadTPS->privateMemoryPage->pageAddress,sizeof(struct page));
 		currentThreadTPS->privateMemoryPage->referenceNumber--;
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_NONE);
-		struct page *newForcurrent = (struct page*)malloc(sizeof(page));
+		struct page *newForcurrent = (struct page*)malloc(sizeof(struct page));
 		currentThreadTPS->privateMemoryPage = newForcurrent;
 		currentThreadTPS->privateMemoryPage->pageAddress = newPage;
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
@@ -197,6 +196,6 @@ int tps_clone(pthread_t tid)
 	*/
 	currentThread->privateMemoryPage = willBeCloned->privateMemoryPage; //phase 3
 	currentThread->privateMemoryPage->referenceNumber++; //phase 3
-	queue_enqueue(newTPS);
+	//queue_enqueue(newTPS);
 	return 0;
 }
