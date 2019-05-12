@@ -5,12 +5,12 @@
 #include <stdint.h>
 #include <sys/types.h>
 
- /*
+/*
  * Size of a TPS area in bytes
  */
 #define TPS_SIZE 4096
 
- /*
+/*
  * tps_init - Initialize TPS
  * @segv - Activate segfault handler
  *
@@ -24,7 +24,7 @@
  */
 int tps_init(int segv);
 
- /*
+/*
  * tps_create - Create TPS
  *
  * Create a TPS area and associate it to the current thread.
@@ -35,7 +35,7 @@ int tps_init(int segv);
  */
 int tps_create(void);
 
- /*
+/*
  * tps_destroy - Destroy TPS
  *
  * Destroy the TPS area associated to the current thread.
@@ -45,7 +45,7 @@ int tps_create(void);
  */
 int tps_destroy(void);
 
- /*
+/*
  * tps_read - Read from TPS
  * @offset: Offset where to read from in the TPS
  * @length: Length of the data to read
@@ -60,7 +60,7 @@ int tps_destroy(void);
  */
 int tps_read(size_t offset, size_t length, char *buffer);
 
- /*
+/*
  * tps_write - Write to TPS
  * @offset: Offset where to write to in the TPS
  * @length: Length of the data to write
@@ -78,7 +78,7 @@ int tps_read(size_t offset, size_t length, char *buffer);
  */
 int tps_write(size_t offset, size_t length, char *buffer);
 
- /*
+/*
  * tps_clone - Clone TPS
  * @tid: TID of the thread to clone
  *
@@ -91,4 +91,4 @@ int tps_write(size_t offset, size_t length, char *buffer);
  */
 int tps_clone(pthread_t tid);
 
- #endif /* _TPS_H */
+#endif /* _TPS_H */
