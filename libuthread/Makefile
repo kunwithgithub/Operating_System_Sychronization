@@ -1,7 +1,7 @@
 # Target library
 lib := libuthread.a
 default_objs := queue.o thread.o
-objs := $(default_objs) sem.o
+objs := $(default_objs) sem.o tps.o
 
 CC := gcc
 CFLAGS := -Wall -Werror

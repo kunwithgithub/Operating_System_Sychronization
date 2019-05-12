@@ -3,7 +3,9 @@ programs := \
 	sem_count.x \
 	sem_buffer.x \
 	sem_prime.x \
-	tps.x
+	tps.x \
+	tps_protection.x
+
 
 # User-level thread library
 UTHREADLIB := libuthread
@@ -42,7 +44,7 @@ endif
 
 # Linker options
 LDFLAGS := -L$(UTHREADPATH) -luthread
-
+tps_protection.x: LDFLAGS += -Wl,--wrap=mmap
 # Include path
 INCLUDE := -I$(UTHREADPATH)
 
@@ -61,10 +63,14 @@ $(libuthread):
 	@echo "MAKE	$@"
 	$(Q)$(MAKE) V=$(V) D=$(D) -C $(UTHREADPATH)
 
+
 # Generic rule for linking final applications
 %.x: %.o $(libuthread)
 	@echo "LD	$@"
 	$(Q)$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+	
+
+
 
 # Generic rule for compiling objects
 %.o: %.c
