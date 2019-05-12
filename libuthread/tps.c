@@ -103,6 +103,12 @@ int tps_init(int segv)
 int tps_create(void)
 {
 	/* TODO: Phase 2 */
+	pthread_t currentTid;
+	currentTid = pthread_self();
+	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
+	if(currentThread != NULL){
+		return -1;
+	}
 	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
 	if(newTPS == (void*)-1){
 		return -1;
@@ -196,7 +202,7 @@ int tps_clone(pthread_t tid)
 	int success = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
 	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
 //	fprintf(stderr,"success is %d and anotherSuccess is %d tid is %ld and currentTid is %ld\n",success,anotherSuccess,tid,currentTid);
-	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread->privateMemoryPage!=NULL){
+	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL){
 		return -1;
 	}
 	/*	phase 2
