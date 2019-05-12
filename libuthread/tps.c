@@ -113,6 +113,7 @@ int tps_create(void)
 	struct page *newPage = mmap(NULL,sizeof(struct page),PROT_NONE,MAP_ANONYMOUS,-1,0);
 	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page));	
 	newTPS->privateMemoryPage->pageAddress = newPage;
+	newTPS->privateMemoryPage->referenceNumber = 1;
 	newTPS->tid = pthread_self();
 	queue_enqueue(newTPS);
 	return 0;
