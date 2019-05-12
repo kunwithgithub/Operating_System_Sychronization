@@ -165,11 +165,11 @@ int tps_write(size_t offset, size_t length, char *buffer)
 		memcpy(newPage,currentThreadTPS->privateMemoryPage->pageAddress,sizeof(struct page));
 		currentThreadTPS->privateMemoryPage->referenceNumber--;
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_NONE);
+		struct page *newForcurrent = (struct page*)malloc(sizeof(page));
+		currentThreadTPS->privateMemoryPage = newForcurrent;
 		currentThreadTPS->privateMemoryPage->pageAddress = newPage;
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
-		
 	}
-	mprotect(currentThreadTPS->privateMemoryPage->pageAddress, sizeof(struct page),PROT_WRITE);
 	memcpy(currentThreadTPS->privateMemoryPage->pageAddress+offset,(void *)buffer,length);
 	
 	return 0;
