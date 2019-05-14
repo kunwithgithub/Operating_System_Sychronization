@@ -108,8 +108,8 @@ int tps_create(void)
 	enter_critical_section();
 	struct TPS *currentThread = NULL;
 	queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-	if(currentThread!= NULL){
-		printf("return -1 and \n");
+	if(currentThread!= NULL||TPSs==NULL){
+	//	printf("return -1 \n");
 		return -1;
 	}
 	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
@@ -179,7 +179,7 @@ int tps_write(size_t offset, size_t length, char *buffer)
 	if(currentThreadTPS->privateMemoryPage->referenceNumber>1){
 		void *newPage = mmap(NULL,TPS_SIZE,PROT_WRITE,MAP_ANONYMOUS|MAP_PRIVATE,-1,0);
 		if(newPage == (void *)-1){
-			fprintf(stderr,"newPage fail!\n");
+			return -1;
 		}
 		memcpy(newPage,currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE);
 		currentThreadTPS->privateMemoryPage->referenceNumber--;
