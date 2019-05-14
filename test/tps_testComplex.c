@@ -8,9 +8,9 @@
 #include <sem.h>
 static sem_t sem1,sem2;
 static char msg1[TPS_SIZE] = "Hello world 1!\n";
-static char msg2[TPS_SIZE] = "hello world 2!\n";
 
-void thread_B(pthread_t tid){
+void *thread_B(void *arg){
+	pthread_t tid = *((pthread_t *)arg);
 	assert(tps_clone(tid)==0);
 	printf("OK - Thread B clones success\n");
 	char *buffer = malloc(TPS_SIZE);
@@ -26,7 +26,7 @@ void thread_B(pthread_t tid){
 	return NULL;
 }
 
-void thread_A(){
+void *thread_A(void *arg){
 	assert(tps_init(1)==-1);
 	printf("OK - init fail when initialized already in main thread\n");
 	assert(tps_create()==0);
@@ -34,9 +34,8 @@ void thread_A(){
 	assert(tps_write(0, TPS_SIZE, msg1)==0);
 	printf("OK - tps written\n");
 	pthread_t tidB;
-	pthread_create(&tidB, NULL, thread_B, tidB);
+	tidB = pthread_create(&tidB, NULL, thread_B,&tidB);
 	sem_down(sem1);
-	char *buffer = malloc(TPS_SIZE);
 	
 	sem_up(sem2);
 	tps_destroy();
@@ -45,7 +44,7 @@ void thread_A(){
 
 
 int main(){
-    	pthread_t currentTid = pthread_self();
+    pthread_t currentTid = pthread_self();
 	assert(tps_destroy()==-1);
 	printf("OK - test destroy when tps not initialized\n");
 	assert(tps_create()==-1);
@@ -61,8 +60,8 @@ int main(){
 	printf("OK - test clone when current thread has tps\n");
 	
 	pthread_t tidA;
-	pthread_create(&tid, NULL, thread_A, NULL);
-	pthread_join(tid, NULL);
+	pthread_create(&tidA, NULL, thread_A, NULL);
+	pthread_join(tidA, NULL);
 	
 	sem_destroy(sem1);
 	sem_destroy(sem2);
