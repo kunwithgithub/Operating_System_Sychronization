@@ -1,15 +1,15 @@
-# ecs150-p3#
+# ECS150 PROJECT 3 Semaphore and TPS #
 
-##TPS implementation##
+## TPS Implementation ##
 
-###Data structures###
+### Data structures ###
 1. **struct TPS**: a struct stores tid and a struct pointer that points to *struct page*.
 2. **struct page**: a struct stores reference count for each page and a void pointer that 
 points to the page address.
 3. **queue_t TPSs**: a queue that I used for stores all TPSs information.
 reference: Brendan.
 
-###API functions###
+### API functions ###
 1. **tps_init()**: for initialization of TPS and signal handler, mainly creates the 
 *TPSs queue* and initializes signal handler for the signals of type *SIGSEGV*and *SIGBUS*.
 Return -1 when *TPSs queue* is already initialized or other initialization failures.
