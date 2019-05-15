@@ -1,5 +1,5 @@
 # ECS150 PROJECT 3 Semaphore and TPS #
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 ## Semaphore ##  
 For our semaphore implementation, we have a semaphore struct and it contains a  
 counter to store number of resources available and a queue to store blocked  
@@ -11,7 +11,7 @@ struct semaphore {
   queue_t waiting;  
  };
 ``` 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 In `sem_up()`, we increment `count` meaning we are freeing a resource, then we   
 check to see if there are any blocked threads in the `waiting` queue, if so, we   
 unblock the first thread and wake it up.  
@@ -45,7 +45,7 @@ struct page{
   int referenceNumber;
 };
 ```  
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 1. **struct TPS**: a struct that stores the tid of a thread and a struct pointer   
 that points to *struct page*, the private memory page.
 2. **struct page**: a private memory page struct that contains a reference   
@@ -61,7 +61,7 @@ and initializes signal handler for the signals of type *SIGSEGV* and *SIGBUS* to
 detect tps protection errors and seg faults. We only let caller call tps_init()   
 once by checking if `TPSs` queue is already created or not.
 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 2. **tps_create()**
 To create a TPS for the calling thread, we need to get the current thread's tid  
 through function `pthread_self()` and pass it to `queue_iterate()` to check if   
@@ -90,16 +90,21 @@ exists,etc.
 When finish reading, need to use `mprotect()` with *PROT_NONE* to take back the
 read permission.
 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 5. **tps_write()**  
 First iterate TPSs queue to find the TPS to write to.
 If found, we use `mprotect()` to give the calling thread write permission of TPS
 by using *PROT_Write*,
-If detected that current thread's TPS points to a page whose reference count is greater than 1, we need to decrement that page's reference
-count, disconnect from it, and create a new page struct for current thread's TPS to hold the information stored in
-*buffer*. After finish, *mprotect()* with *PROT_NONE* to take back the permission. Return -1 when encountering 
+If detected that current thread's TPS points to a page whose reference count is  
+greater than 1, that is, if the current thread is sharing a page with another   
+thread, we need to create a new memory page and copy the content from the   
+original memory page. Then we decrement the reference counter since page not   
+sharing with another thread anymore.
+
+After finish, use *mprotect()* with *PROT_NONE* to take back the permission.   
+Return -1 when encountering 
 issues, such as out-of-bound and one of the TPS we need not exists,etc.
-*enter_critical_section()* and *exit_critical_section()* is used for *mutual exclusion*.
+
 
 6. **tps_clone()**: for phase 2, we bascially create a new TPS struct with its own private memory page
 and writes data into it from the thread that we need to clone using *memcpy()*. For phase 3,
