@@ -12,7 +12,7 @@
 #include "tps.h"
 
 /* TODO: Phase 2 */
-queue_t TPSs;
+static queue_t TPSs;
 
 struct TPS{
 	pthread_t tid;
@@ -27,9 +27,10 @@ struct page{
 int find_item(void *data, void *arg)
 {
     pthread_t tid = (*(pthread_t*)arg);
-  
-    if (tid == ((struct TPS*)data)->tid)
-    {
+
+	pthread_t idNeedToFind = ((struct TPS*)data)->tid;
+    if ( idNeedToFind == tid)
+    {	
         return 1;
     }
 
@@ -103,30 +104,36 @@ int tps_init(int segv)
 int tps_create(void)
 {
 	/* TODO: Phase 2 */
+		
 	pthread_t currentTid;
 	currentTid = pthread_self();
 	enter_critical_section();
 	struct TPS *currentThread = NULL;
-	queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
+	queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
 	if(currentThread!= NULL||TPSs==NULL){
-	//	printf("return -1 \n");
+	
+		exit_critical_section();
 		return -1;
 	}
 	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
 	if(newTPS == NULL){
+		exit_critical_section();
 		return -1;
 	}
+
 	void* newPage = mmap(NULL,TPS_SIZE,PROT_NONE,MAP_ANONYMOUS|MAP_PRIVATE,-1,0);
 	if(newPage == (void*)-1){
+		exit_critical_section();
 		return -1;
 	}else{
-//		printf("mmap success! \n");
+
 	}
 	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page));	
 	newTPS->privateMemoryPage->pageAddress = newPage;
 	newTPS->privateMemoryPage->referenceNumber = 1;
-	newTPS->tid = pthread_self();
+	newTPS->tid = currentTid;
 	queue_enqueue(TPSs,(void*)newTPS);
+
 	exit_critical_section();
 	return 0;
 }
@@ -135,30 +142,33 @@ int tps_create(void)
 int tps_destroy(void)
 {
 	/* TODO: Phase 2 */
+	enter_critical_section();
 	pthread_t currentTid;
+
 	currentTid = pthread_self();
 	struct TPS *currentTPS = NULL;
-	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentTPS);
+	int success = queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentTPS);
 	if(currentTPS==NULL||success==-1){
+		exit_critical_section();
 		return -1;
 	}
 	munmap(currentTPS->privateMemoryPage->pageAddress,TPS_SIZE);
 	queue_delete(TPSs,currentTPS);
 	free(currentTPS);
+	exit_critical_section();
 	return 0;
 }
 
 int tps_read(size_t offset, size_t length, char *buffer)
 {
-	/* TODO: Phase 2 */
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThread = NULL;
-	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
+	int success = queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
 	if(success == -1 || currentThread == NULL||offset+length>TPS_SIZE||buffer == NULL){
+		exit_critical_section();
 		return -1;
 	}
 	mprotect(currentThread->privateMemoryPage->pageAddress,TPS_SIZE,PROT_READ);
-//	fprintf(stderr,"currentThread %d \n",currentThread->privateMemoryPage->referenceNumber);
 	memcpy((void *)buffer, currentThread->privateMemoryPage->pageAddress+offset,length);
 	mprotect(currentThread->privateMemoryPage->pageAddress,TPS_SIZE,PROT_NONE);
 	return 0;
@@ -166,19 +176,22 @@ int tps_read(size_t offset, size_t length, char *buffer)
 
 int tps_write(size_t offset, size_t length, char *buffer)
 {
-	/* TODO: Phase 2 */
+	
 	enter_critical_section();
+	
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThreadTPS = NULL;
 	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThreadTPS);
 	if(success == -1 || currentThreadTPS->privateMemoryPage == NULL||offset+length>TPS_SIZE||buffer == NULL){
+		exit_critical_section();
 		return -1;
 	}
-//	printf("success is %d referenceNumber = %d \n",success,currentThreadTPS->privateMemoryPage->referenceNumber);
+
 	mprotect(currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE,PROT_WRITE);
 	if(currentThreadTPS->privateMemoryPage->referenceNumber>1){
 		void *newPage = mmap(NULL,TPS_SIZE,PROT_WRITE,MAP_ANONYMOUS|MAP_PRIVATE,-1,0);
 		if(newPage == (void *)-1){
+			exit_critical_section();
 			return -1;
 		}
 		memcpy(newPage,currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE);
@@ -199,14 +212,19 @@ int tps_write(size_t offset, size_t length, char *buffer)
 int tps_clone(pthread_t tid)
 {
 	/* TODO: Phase 2 */
+	if(TPSs == NULL){
+		return -1;
+	}
 	enter_critical_section();
 	pthread_t currentTid = pthread_self();
 	struct TPS *willBeCloned = NULL;
 	struct TPS *currentThread = NULL;
-	int success = queue_iterate(TPSs,find_item,(void *)tid,(void **)&willBeCloned);
-	int anotherSuccess = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThread);
-//	fprintf(stderr,"success is %d and anotherSuccess is %d tid is %ld and currentTid is %ld\n",success,anotherSuccess,tid,currentTid);
-	if(willBeCloned == NULL || success == -1|| anotherSuccess==-1 ||currentThread!=NULL){
+	queue_iterate(TPSs,find_item,(void *)&tid,(void **)&willBeCloned);
+	queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
+
+	if(willBeCloned == NULL ||currentThread!=NULL){
+		
+		exit_critical_section();
 		return -1;
 	}
 	/*	phase 2
@@ -224,7 +242,7 @@ int tps_clone(pthread_t tid)
 	newTPS->privateMemoryPage = willBeCloned->privateMemoryPage;
 	currentThread->privateMemoryPage->referenceNumber++; //phase 3
 	queue_enqueue(TPSs,(void *)newTPS);
-//	fprintf(stderr,"currentThread in clone %d and willBeCloned is %d \n",currentThread->privateMemoryPage->referenceNumber, willBeCloned->privateMemoryPage->referenceNumber);
+
 	exit_critical_section();
 	return 0;
 }
