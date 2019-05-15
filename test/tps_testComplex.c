@@ -6,6 +6,7 @@
 #include <string.h>
 #include <tps.h>
 #include <sem.h>
+
 static sem_t sem1,sem2;
 static char msg1[TPS_SIZE] = "Hello world 1!\n";
 pthread_t globalA;

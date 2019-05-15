@@ -11,7 +11,7 @@
 #include "thread.h"
 #include "tps.h"
 
-/* TODO: Phase 2 */
+//queue to store thread private storages
 static queue_t TPSs;
 
 struct TPS{
@@ -24,6 +24,7 @@ struct page{
 	int referenceNumber;
 };
 
+//function to find tps with matching tid
 int find_item(void *data, void *arg)
 {
     pthread_t tid = (*(pthread_t*)arg);
@@ -37,10 +38,10 @@ int find_item(void *data, void *arg)
     return 0;
 }
 
+//function to find tps with matching pageAddress
 int find_fault(void *data, void *arg)
 {
 	
-  
     if (arg == ((struct TPS*)data)->privateMemoryPage->pageAddress)
     {
         return 1;
@@ -78,7 +79,7 @@ static void segv_handler(int sig, siginfo_t *si, void *context)
 
 int tps_init(int segv)
 {
-	/* TODO: Phase 2 */
+	//tps_init can only be called once
 	if(TPSs != NULL){
 		return -1;
 	}
@@ -88,6 +89,8 @@ int tps_init(int segv)
 	if(TPSs == NULL){
 		return -1;
 	}
+
+	//page fault handler to detect TPS protection error and seg fault
 	if (segv) {
         struct sigaction sa;
 
@@ -103,31 +106,33 @@ int tps_init(int segv)
 
 int tps_create(void)
 {
-	/* TODO: Phase 2 */
 		
 	pthread_t currentTid;
 	currentTid = pthread_self();
 	enter_critical_section();
+	
+	//if TPS already existed for calling thread, error
 	struct TPS *currentThread = NULL;
 	queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
-	if(currentThread!= NULL||TPSs==NULL){
-	
+	if(currentThread!= NULL || TPSs == NULL){
 		exit_critical_section();
 		return -1;
 	}
+
+	//create new TPS
 	struct TPS *newTPS = (struct TPS*)malloc(TPS_SIZE);
 	if(newTPS == NULL){
 		exit_critical_section();
 		return -1;
 	}
 
+	//initialize memory page
 	void* newPage = mmap(NULL,TPS_SIZE,PROT_NONE,MAP_ANONYMOUS|MAP_PRIVATE,-1,0);
 	if(newPage == (void*)-1){
 		exit_critical_section();
 		return -1;
-	}else{
-
 	}
+	
 	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page));	
 	newTPS->privateMemoryPage->pageAddress = newPage;
 	newTPS->privateMemoryPage->referenceNumber = 1;
@@ -141,20 +146,23 @@ int tps_create(void)
 
 int tps_destroy(void)
 {
-	/* TODO: Phase 2 */
 	enter_critical_section();
 	pthread_t currentTid;
-
 	currentTid = pthread_self();
+
+	//find the current TPS to destroy
 	struct TPS *currentTPS = NULL;
 	int success = queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentTPS);
-	if(currentTPS==NULL||success==-1){
+	if(currentTPS == NULL || success == -1){
 		exit_critical_section();
 		return -1;
 	}
+
+	//remove mapping of memory page and delete and free TPS from queue
 	munmap(currentTPS->privateMemoryPage->pageAddress,TPS_SIZE);
 	queue_delete(TPSs,currentTPS);
 	free(currentTPS);
+
 	exit_critical_section();
 	return 0;
 }
@@ -163,13 +171,19 @@ int tps_read(size_t offset, size_t length, char *buffer)
 {
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThread = NULL;
+
+	//find current TPS to read from
 	int success = queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
-	if(success == -1 || currentThread == NULL||offset+length>TPS_SIZE||buffer == NULL){
+	if(success == -1 || currentThread == NULL || offset+length > TPS_SIZE || buffer == NULL){
 		exit_critical_section();
 		return -1;
 	}
+
+	//TPS gives reading permission and buffer receives the data
 	mprotect(currentThread->privateMemoryPage->pageAddress,TPS_SIZE,PROT_READ);
 	memcpy((void *)buffer, currentThread->privateMemoryPage->pageAddress+offset,length);
+
+	//after reading, change back to no permission granted
 	mprotect(currentThread->privateMemoryPage->pageAddress,TPS_SIZE,PROT_NONE);
 	return 0;
 }
@@ -178,32 +192,50 @@ int tps_write(size_t offset, size_t length, char *buffer)
 {
 	
 	enter_critical_section();
-	
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThreadTPS = NULL;
+
+	//find current TPS to write to
 	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThreadTPS);
-	if(success == -1 || currentThreadTPS->privateMemoryPage == NULL||offset+length>TPS_SIZE||buffer == NULL){
+	if(success == -1 || currentThreadTPS->privateMemoryPage == NULL || offset+length > TPS_SIZE || buffer == NULL){
 		exit_critical_section();
 		return -1;
 	}
 
+	//give writing permission
 	mprotect(currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE,PROT_WRITE);
+
+	//if current thread is sharing a page with another thread
 	if(currentThreadTPS->privateMemoryPage->referenceNumber>1){
+
+		//create a new memory page and copy the content from the original memory page.
 		void *newPage = mmap(NULL,TPS_SIZE,PROT_WRITE,MAP_ANONYMOUS|MAP_PRIVATE,-1,0);
 		if(newPage == (void *)-1){
 			exit_critical_section();
 			return -1;
 		}
 		memcpy(newPage,currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE);
+
+		//page not sharing with another thread anymore
 		currentThreadTPS->privateMemoryPage->referenceNumber--;
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress,TPS_SIZE ,PROT_NONE);
+
 		struct page *newForcurrent = (struct page*)malloc(sizeof(struct page));
+		if (newForcurrent == NULL){
+			exit_critical_section();
+			return -1;
+		}
+
 		currentThreadTPS->privateMemoryPage = newForcurrent;
 		currentThreadTPS->privateMemoryPage->pageAddress = newPage;
+		//give writing permission
 		mprotect(currentThreadTPS->privateMemoryPage->pageAddress, TPS_SIZE,PROT_WRITE);
 	}
 	
+	//write buffer into TPS 
 	memcpy(currentThreadTPS->privateMemoryPage->pageAddress+offset,buffer,length);
+
+	//after writing, change back to no permission
 	mprotect(currentThreadTPS->privateMemoryPage->pageAddress, TPS_SIZE,PROT_NONE);
 	exit_critical_section();
 	return 0;
@@ -211,37 +243,44 @@ int tps_write(size_t offset, size_t length, char *buffer)
 
 int tps_clone(pthread_t tid)
 {
-	/* TODO: Phase 2 */
 	if(TPSs == NULL){
 		return -1;
 	}
+
 	enter_critical_section();
 	pthread_t currentTid = pthread_self();
-	struct TPS *willBeCloned = NULL;
-	struct TPS *currentThread = NULL;
+
+	struct TPS *willBeCloned = NULL; //TPS to be cloned
+	struct TPS *currentThread = NULL; //calling thread's TPS
+
+	//find the TPS that calling thread wants to clone
 	queue_iterate(TPSs,find_item,(void *)&tid,(void **)&willBeCloned);
+
+	//find the TPS of the calling thread
 	queue_iterate(TPSs,find_item,(void *)&currentTid,(void **)&currentThread);
 
-	if(willBeCloned == NULL ||currentThread!=NULL){
-		
+	//if could not find TPS to be cloned or calling thread already has a TPS
+	if(willBeCloned == NULL || currentThread != NULL){
 		exit_critical_section();
 		return -1;
 	}
-	/*	phase 2
-	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
-	newTPS->tid = currentTid;
 	
-	newTPS->privateMemoryPage = (struct page*)malloc(sizeof(struct page);
-	newTPS->privateMemoryPage->pageAddress = mmap(NULL,sizeof(struct page),PROT_EXEC|PROT_READ|PROT_WRITE,MAP_ANONYMOUS,-1,0);
-	memcpy(newTPS,willBeCloned,TPS_SIZE);
-	*/
-	/* phase 3 */
+	//create a new TPS for cloning
 	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
+	if(newTPS == NULL){
+		exit_critical_section();
+		return -1;
+	}
+
 	newTPS->tid = currentTid;
 	currentThread = newTPS;
+
+	//clone memory page
 	newTPS->privateMemoryPage = willBeCloned->privateMemoryPage;
+
+	//current thread is sharing a page with TPS to be cloned
 	currentThread->privateMemoryPage->referenceNumber++; //phase 3
-	queue_enqueue(TPSs,(void *)newTPS);
+	queue_enqueue(TPSs, (void *)newTPS);
 
 	exit_critical_section();
 	return 0;
