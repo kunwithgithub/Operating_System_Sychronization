@@ -9,13 +9,14 @@
 
 static sem_t sem1,sem2;
 static char msg1[TPS_SIZE] = "Hello world 1!\n";
+char *buffer;
 pthread_t globalA;
 void *thread_B(void *arg){
 
 	pthread_t tid = *((pthread_t *)arg);
 	assert(tps_clone(tid)==0);
 	printf("OK - Thread B clones success\n");
-	char *buffer = malloc(TPS_SIZE);
+	buffer = malloc(TPS_SIZE);
 	memset(buffer, 0, TPS_SIZE);
 	assert(tps_read(100, TPS_SIZE, buffer)==-1);
 	printf("OK - invalid read offset case passed !\n");
@@ -71,6 +72,11 @@ int main(){
 	printf("OK - tps initialized\n");
 	assert(tps_clone(currentTid)==-1);
 	printf("OK - test clone when thread @tid does not have tps\n");
+	buffer = malloc(TPS_SIZE);
+	assert(tps_read(0, TPS_SIZE, buffer)==-1);
+	printf("OK - test read when tps is not created\n");
+	assert(tps_write(0, TPS_SIZE, msg1)==-1);
+	printf("OK - test write when tps is not created\n");
 	assert(tps_create()==0);
 	printf("OK - tps created\n");
 	

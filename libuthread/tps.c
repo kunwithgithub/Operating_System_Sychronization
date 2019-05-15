@@ -203,7 +203,8 @@ int tps_write(size_t offset, size_t length, char *buffer)
 
 	//find current TPS to write to
 	int success = queue_iterate(TPSs,find_item,(void *)currentTid,(void **)&currentThreadTPS);
-	if(success == -1 || currentThreadTPS->privateMemoryPage == NULL || offset+length > TPS_SIZE || buffer == NULL){
+	
+	if(success == -1 || currentThreadTPS == NULL || offset+length > TPS_SIZE || buffer == NULL){
 		exit_critical_section();
 		return -1;
 	}
@@ -277,7 +278,7 @@ int tps_clone(pthread_t tid)
 		exit_critical_section();
 		return -1;
 	}
-	
+
 	currentThread->tid = currentTid;
 	//clone memory page
 	currentThread->privateMemoryPage = willBeCloned->privateMemoryPage;
