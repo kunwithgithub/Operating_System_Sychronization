@@ -1,12 +1,12 @@
 /*
-1. Thread A creates a TPS
-2. Thread B tries to access A's TPS illegally
-3. Check that we have a TPS violation error
-
-Outputs should be:
-    TPS protection error!
-    segmentation fault (core dumped)
-*/
+ 1. Thread A creates a TPS
+ 2. Thread B tries to access A's TPS illegally
+ 3. Check that we have a TPS violation error
+ 
+ Outputs should be:
+ TPS protection error!
+ segmentation fault (core dumped)
+ */
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
@@ -34,20 +34,20 @@ void *thread_A(void*parameter)
     char *tps_addr = latest_mmap_addr;
     /* Cause an intentional TPS protection error */
     tps_addr[0] = '\0';
-
+    
     return NULL;
 }
 
 int main(){
     
     pthread_t tid;
-
+    
     /* Init TPS API */
-	tps_init(1);
-
+    tps_init(1);
+    
     /* Create thread 1 and wait */
-	pthread_create(&tid, NULL, thread_A, NULL);
-	pthread_join(tid, NULL);
-
+    pthread_create(&tid, NULL, thread_A, NULL);
+    pthread_join(tid, NULL);
+    
     return 0;
 }
