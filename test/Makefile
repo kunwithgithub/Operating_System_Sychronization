@@ -5,8 +5,7 @@ programs := \
 	sem_prime.x \
 	tps.x \
 	tps_protection.x \
-	tps_testComplex.x \
-	tester.x
+	tps_testComplex.x 
 
 # User-level thread library
 UTHREADLIB := libuthread

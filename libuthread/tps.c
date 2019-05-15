@@ -271,22 +271,20 @@ int tps_clone(pthread_t tid)
 		return -1;
 	}
 	
-	//create a new TPS for cloning
-	struct TPS *newTPS = (struct TPS*)malloc(sizeof(struct TPS));
-	if(newTPS == NULL){
+	//create a new TPS for calling thread
+	currentThread = (struct TPS*)malloc(sizeof(struct TPS));
+	if(currentThread == NULL){
 		exit_critical_section();
 		return -1;
 	}
-
-	newTPS->tid = currentTid;
-	currentThread = newTPS;
-
+	
+	currentThread->tid = currentTid;
 	//clone memory page
-	newTPS->privateMemoryPage = willBeCloned->privateMemoryPage;
+	currentThread->privateMemoryPage = willBeCloned->privateMemoryPage;
 
 	//current thread is sharing a page with TPS to be cloned
 	currentThread->privateMemoryPage->referenceNumber++; //phase 3
-	queue_enqueue(TPSs, (void *)newTPS);
+	queue_enqueue(TPSs, (void *)currentThread);
 
 	exit_critical_section();
 	return 0;
