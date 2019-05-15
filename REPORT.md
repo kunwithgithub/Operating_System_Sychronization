@@ -41,7 +41,7 @@ struct page{
 1. **struct TPS**: a struct that stores the tid of a thread and a struct pointer that points to *struct page*, the private memory page.
 2. **struct page**: a private memory page struct that contains a reference counter to counter the number of threads sharing the same page and a void pointer that 
 points to the page address.
-3. **queue_t TPSs**: a queue that I used for stores all TPSs information.
+3. **queue_t TPSs**: a queue to store all the thread private storages(`TPSs`)
 reference: Brendan.
 
 ### API functions ###
