@@ -5,10 +5,12 @@ For our semaphore implementation, we have a semaphore struct and it contains a
 counter to store number of resources available and a queue to store blocked  
 threads.  
 
-```cstruct semaphore {  
+```c  
+struct semaphore {  
   int count;  
   queue_t waiting;  
- };``` 
+ };
+``` 
 
 In `sem_up()`, we increment `count` meaning we are freeing a resource, then we check  to see if there are any blocked threads in the `waiting` queue, if so, we unblock the first thread and wake it up.
  In `sem_down()`, we first check if there are no resources available, we block the thread and put it into `waiting` queue. Then we decrement `count` meaning to remove a resource.  
@@ -34,7 +36,8 @@ struct TPS{
 struct page{
   void *pageAddress; // phase 3
   int referenceNumber;
-};```
+};
+```
 1. **struct TPS**: a struct that stores the tid of a thread and a struct pointer that points to *struct page*, the private memory page.
 2. **struct page**: a private memory page struct that contains a reference counter to counter the number of threads sharing the same page and a void pointer that 
 points to the page address.
