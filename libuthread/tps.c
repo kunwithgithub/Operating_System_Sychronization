@@ -169,6 +169,10 @@ int tps_destroy(void)
 
 int tps_read(size_t offset, size_t length, char *buffer)
 {
+	if(TPSs == NULL){
+		return -1;
+	}
+
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThread = NULL;
 
@@ -190,7 +194,9 @@ int tps_read(size_t offset, size_t length, char *buffer)
 
 int tps_write(size_t offset, size_t length, char *buffer)
 {
-	
+	if(TPSs == NULL){
+		return -1;
+	}
 	enter_critical_section();
 	pthread_t currentTid = pthread_self();
 	struct TPS *currentThreadTPS = NULL;
