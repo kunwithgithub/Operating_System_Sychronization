@@ -9,7 +9,7 @@
 
 static sem_t sem1,sem2;
 static char msg1[TPS_SIZE] = "Hello world 1!\n";
-char *buffer;
+char *buffer = NULL;
 pthread_t globalA;
 void *thread_B(void *arg){
 
@@ -19,9 +19,9 @@ void *thread_B(void *arg){
 	buffer = malloc(TPS_SIZE);
 	memset(buffer, 0, TPS_SIZE);
 	assert(tps_read(100, TPS_SIZE, buffer)==-1);
-	printf("OK - invalid read offset case passed !\n");
+	printf("OK - invalid read offset case passed\n");
 	assert(tps_read(0, TPS_SIZE+1, buffer)==-1);
-	printf("OK - invalid read length case passed !\n");
+	printf("OK - invalid read length case passed\n");
 	assert(tps_read(0, TPS_SIZE, buffer)==0);
 	printf("OK - Thread B reads success! \n");
 	assert(!memcmp(msg1, buffer, TPS_SIZE));
@@ -37,13 +37,15 @@ void *thread_A(void *arg){
 
 	pthread_t tidA = pthread_self();
 	assert(tps_init(1)==-1);
-	printf("OK - init fail when initialized already in main thread\n");
+	printf("OK - init fail when already initialized in main thread\n");
 	assert(tps_create()==0);
 	printf("OK - tps created \n");
+	assert(tps_create()==-1);
+	printf("OK - tps already existed \n");
 	assert(tps_write(100, TPS_SIZE, msg1)==-1);
-	printf("OK - invalid write offset case passed !\n");
+	printf("OK - invalid write offset case passed\n");
 	assert(tps_write(0, TPS_SIZE+1, msg1)==-1);
-	printf("OK - invalid write length case passed !\n");
+	printf("OK - invalid write length case passed\n");
 	assert(tps_write(0, TPS_SIZE, msg1)==0);
 	printf("OK - tps written\n");
 	pthread_t tidB;
@@ -53,7 +55,7 @@ void *thread_A(void *arg){
 	
 	
 	assert(tps_destroy()==0);
-	printf("OK - TPS A destroy!\n");
+	printf("OK - TPS A destroy\n");
 	return NULL;
 }
 
@@ -72,6 +74,12 @@ int main(){
 	printf("OK - tps initialized\n");
 	assert(tps_clone(currentTid)==-1);
 	printf("OK - test clone when thread @tid does not have tps\n");
+	
+	assert(tps_read(0, TPS_SIZE, buffer)==-1);
+	printf("OK - test read when buffer is NULL\n");
+	assert(tps_write(0, TPS_SIZE, buffer)==-1);
+	printf("OK - test write when buffer is NULL\n");
+
 	buffer = malloc(TPS_SIZE);
 	assert(tps_read(0, TPS_SIZE, buffer)==-1);
 	printf("OK - test read when tps is not created\n");

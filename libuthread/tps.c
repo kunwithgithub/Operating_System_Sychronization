@@ -29,8 +29,7 @@ int find_item(void *data, void *arg)
 {
     pthread_t tid = (*(pthread_t*)arg);
 
-	pthread_t idNeedToFind = ((struct TPS*)data)->tid;
-    if ( idNeedToFind == tid)
+    if (((struct TPS*)data)->tid == tid)
     {	
         return 1;
     }
