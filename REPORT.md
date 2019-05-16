@@ -64,8 +64,8 @@ once by checking if `TPSs` queue is already created or not.
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 **tps_create()**  
 To create a TPS for the calling thread, we need to get the current thread's tid  
-through function `pthread_self()` and pass it to `queue_iterate()` to check if   
-the current thread already have a TPS. 
+through function `pthread_self()` and pass it to `queue_iterate()` to check if  
+the current thread already have a TPS.  
 If TPS already exists or there are other creation failures, then we return -1.  
 If not, create a `newTPS` struct and `privateMemoryPage` struct using `malloc()`   
 and initialize a  memory space for page using `mmap()` (protected by *PROT_NONE*   
@@ -81,7 +81,7 @@ For destroying TPS, we use the current tid and iterate through our `TPSs` queue
 to find the TPS. If found, we need to look at it's `referenceNumber`, if its  
 sharing a page with aother thread, we decrement the reference counter and then  
 delete and free the TPS.
-If reference counter = 1, we destroy its private page memory using `munmap()`,
+If reference counter = 1, we destroy its private page memory using `munmap()`,  
 delete the TPS from the queue and lastly free the TPS struct.  
 
 **tps_read()**  
