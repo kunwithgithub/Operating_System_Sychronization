@@ -78,41 +78,54 @@ map-anonymous-flag-in-mmap-system-call
 
 3. **tps_destroy()**  
 For destroying TPS, we use the current tid and iterate through our `TPSs` queue  
-to find the TPS. If found, we destroy its private page memory using `munmap()`,
-delete the TPS from the queue and free the TPS struct. 
+to find the TPS. If found, we need to look at it's `referenceNumber`, if its  
+sharing a page with aother thread, we decrement the reference counter and then  
+delete and free the TPS.
+If reference counter = 1, we destroy its private page memory using `munmap()`,
+delete the TPS from the queue and lastly free the TPS struct. 
 
 4. **tps_read()**
 Again, we need to iterate TPSs queue to find the TPS to read from.
 If found, we use `mprotect()` to give the calling thread read permission of TPS
-by using *PROT_READ*, then we `memcpy()` TPS's data to `buffer`. 
+by using *PROT_READ*, then we `memcpy()` TPS's data into `buffer`. 
 This function returns -1 when encountering issues, such as out-of-bound, TPS not   
-exists,etc. 
+exists, did not find TPS, etc. 
 When finish reading, need to use `mprotect()` with *PROT_NONE* to take back the
 read permission.
 
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 5. **tps_write()**  
-First iterate TPSs queue to find the TPS to write to.
+We first iterate TPSs queue to find the current TPS to write to.
 If found, we use `mprotect()` to give the calling thread write permission of TPS
-by using *PROT_Write*,
+by using *PROT_Write*.
 If detected that current thread's TPS points to a page whose reference count is  
 greater than 1, that is, if the current thread is sharing a page with another   
-thread, we need to create a new memory page and copy the content from the   
-original memory page. Then we decrement the reference counter since page not   
-sharing with another thread anymore.
+thread, we then need to create a new memory page with `mmap()` and `memcpy()`and  
+copy the content from the original memory page. Then we decrement the reference  
+counter since page is not sharing with another thread anymore.
+After this, we use `mprotect()` with *PROT_NONE* to take back the permission.  
+Then we give the new memory page to the current thread's TPS and give it write  
+permission.
+Lastly, we write `buffer` into the page and take back writing permission.
 
-After finish, use *mprotect()* with *PROT_NONE* to take back the permission.   
-Return -1 when encountering 
-issues, such as out-of-bound and one of the TPS we need not exists,etc.
+6. **tps_clone()**  
+For phase 2, we basically create a new TPS struct with its own private memory  
+page and writes data into it from the thread that we need to clone using   
+`memcpy()`. 
+For phase 3, we create `currentThread` TPS for the calling thread, and  
+`willBeCloned` TPS which stores the TPS calling thread wants to clone.  
+Then we just clone `willBeCloned`'s private memeory page into current thread's  
+page. Also, we increment the reference counter since calling thread is sharing  
+a page with willBeCloned. Lastly, we enqueue the current TPS into queue.
 
+This function returns -1 when the TPS we need to clone does not  
+exist or current thread already has a TPS, etc.
 
-6. **tps_clone()**: for phase 2, we bascially create a new TPS struct with its own private memory page
-and writes data into it from the thread that we need to clone using *memcpy()*. For phase 3,
-we bascially just create a newTPS struct for the current thread, and points the *privateMemoryPage* in
-current thread's TPS struct to the page struct of the thread that we will clone it for the current thread.
-Return -1 when encountering issues, such as the TPS we need to clone not exists or current thread already
-has a TPS,etc.
-*enter_critical_section()* and *exit_critical_section()* is used for *mutual exclusion*.
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+## Critical Sections ##
+We use `enter_critical_section()` and `exit_critical_section()` for mutual  
+exclusion. We enter mutual exclusion before we modify TPS's, queue, or perform  
+mmap(), memcpy(), mprotect() operations and etc. We exit critical sections  
+before everytime we return 0 or -1.
 
-
-We use `enter_critical_section()` and `exit_critical_section()` is used for mutual exclusion.
+## Testing TPS ##  
