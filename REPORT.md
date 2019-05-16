@@ -80,7 +80,7 @@ map-anonymous-flag-in-mmap-system-call
 For destroying TPS, we use the current tid and iterate through our `TPSs` queue  
 to find the TPS. If found, we need to look at it's `referenceNumber`, if its  
 sharing a page with aother thread, we decrement the reference counter and then  
-delete and free the TPS.
+delete and free the TPS.  
 If reference counter = 1, we destroy its private page memory using `munmap()`,  
 delete the TPS from the queue and lastly free the TPS struct.  
 
