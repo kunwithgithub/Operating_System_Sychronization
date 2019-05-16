@@ -51,18 +51,18 @@ that points to *struct page*, the private memory page.
 2. **struct page**: a private memory page struct that contains a reference   
 counter to counter the number of threads sharing the same page and a void   
 pointer that points to the page address.
-3. **queue_t TPSs**: a queue to store all the thread private storages(`TPSs`)
+3. **queue_t TPSs**: a queue to store all the thread private storages(`TPSs`)  
 reference: Brendan.
 
 ### API functions ###
-1. **tps_init()** 
+**tps_init()** 
 For initialization of TPS and signal handler, we mainly create the `TPSs` queue  
 and initializes signal handler for the signals of type *SIGSEGV* and *SIGBUS* to  
 detect tps protection errors and seg faults. We only let caller call tps_init()   
 once by checking if `TPSs` queue is already created or not.
 
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
-2. **tps_create()**
+**tps_create()**
 To create a TPS for the calling thread, we need to get the current thread's tid  
 through function `pthread_self()` and pass it to `queue_iterate()` to check if   
 the current thread already have a TPS. 
@@ -76,7 +76,7 @@ all tps's.
 reference: https://stackoverflow.com/questions/34042915/what-is-the-purpose-of-  
 map-anonymous-flag-in-mmap-system-call
 
-3. **tps_destroy()**  
+**tps_destroy()**  
 For destroying TPS, we use the current tid and iterate through our `TPSs` queue  
 to find the TPS. If found, we need to look at it's `referenceNumber`, if its  
 sharing a page with aother thread, we decrement the reference counter and then  
@@ -84,7 +84,7 @@ delete and free the TPS.
 If reference counter = 1, we destroy its private page memory using `munmap()`,
 delete the TPS from the queue and lastly free the TPS struct. 
 
-4. **tps_read()**
+**tps_read()**
 Again, we need to iterate TPSs queue to find the TPS to read from.
 If found, we use `mprotect()` to give the calling thread read permission of TPS
 by using *PROT_READ*, then we `memcpy()` TPS's data into `buffer`. 
@@ -94,7 +94,7 @@ When finish reading, need to use `mprotect()` with *PROT_NONE* to take back the
 read permission.
 
 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
-5. **tps_write()**  
+**tps_write()**  
 We first iterate TPSs queue to find the current TPS to write to.
 If found, we use `mprotect()` to give the calling thread write permission of TPS
 by using *PROT_Write*.
@@ -108,7 +108,7 @@ Then we give the new memory page to the current thread's TPS and give it write
 permission.
 Lastly, we write `buffer` into the page and take back writing permission.
 
-6. **tps_clone()**  
+**tps_clone()**  
 For phase 2, we basically create a new TPS struct with its own private memory  
 page and writes data into it from the thread that we need to clone using   
 `memcpy()`. 
