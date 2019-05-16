@@ -109,9 +109,8 @@ Then we just clone `willBeCloned`'s private memeory page into current thread's
 page. Also, we increment the reference counter since calling thread is sharing  
 a page with willBeCloned. Lastly, we enqueue the current TPS into `TPSs` queue.  
 This function returns -1 when the TPS we need to clone does not exist or current  
-thread already has a TPS, etc.
+thread already has a TPS, etc.  
 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 ## Critical Sections ##
 We use `enter_critical_section()` and `exit_critical_section()` for mutual  
 exclusion. We enter mutual exclusion before we modify TPS's, queue, or perform  
@@ -123,7 +122,7 @@ We were able to pass all three semaphore testers provided by professor.
 
 For TPS testing, we were also able to pass the tps.c tester given by professor.  
 We also created two additional testers for testing tps protection errors and  
-seg fault, and for testing more complex cases of TPS and error and corner cases.  
+seg fault, and for testing more complex cases of TPS and corner cases.  
 
 ### tps_protection.c ###  
 In this tester, we basically followed professor's slides to test for tps  
@@ -133,7 +132,7 @@ were also able to get the expected outputs:
 TPS protection error!  
 segmentation fault (core dumped)
 ```  
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+
 ### tps_testComplex.c ###  
 In this tester, we have 23 test cases which test all corner cases such as:  
 * destorying a tps or creating a tps before tps_init() is called  
