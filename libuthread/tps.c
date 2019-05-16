@@ -162,10 +162,10 @@ int tps_destroy(void)
     currentTPS->privateMemoryPage->referenceNumber--;
     queue_delete(TPSs,currentTPS);
     free(currentTPS);
-    
+
     exit_critical_section();
     return 0;
- }
+  }
   //remove mapping of memory page and delete and free TPS from queue
   munmap(currentTPS->privateMemoryPage->pageAddress,TPS_SIZE);
   queue_delete(TPSs,currentTPS);
