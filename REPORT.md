@@ -1,5 +1,4 @@
-# ECS150 PROJECT 3 Semaphore and TPS #
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+# ECS150 PROJECT 3 Semaphore and TPS #  
 ## Semaphore ##  
 For our semaphore implementation, we have a semaphore struct and it contains a  
 counter to store number of resources available and a queue to store blocked  
@@ -10,8 +9,7 @@ struct semaphore {
   int count;  
   queue_t waiting;  
  };
-``` 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+```   
 In `sem_up()`, we increment `count` meaning we are freeing a resource, then we   
 check to see if there are any blocked threads in the `waiting` queue, if so, we   
 unblock the first thread and wake it up.  
@@ -23,12 +21,6 @@ remove a resource.
 As for entering and exiting critical sections, we enter a critical section when   
 we want to modify `count` or `waiting` queue, then exit critical section when we   
 are done modifying.
- 
-In `sem_getvalue()`
- 
-## Testing Semaphore ##  
-We were able to pass all three testers provided by professor.
-
 
 ## TPS Implementation ##
 ### Data structures ###  
@@ -44,8 +36,7 @@ struct page{
   void *pageAddress; // phase 3
   int referenceNumber;
 };
-```  
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+```    
 1. **struct TPS**: a struct that stores the tid of a thread and a struct pointer   
 that points to *struct page*, the private memory page.
 2. **struct page**: a private memory page struct that contains a reference   
@@ -60,8 +51,7 @@ For initialization of TPS and signal handler, we mainly create the `TPSs` queue
 and initializes signal handler for the signals of type *SIGSEGV* and *SIGBUS* to  
 detect tps protection errors and seg faults. We only let caller call tps_init()   
 once by checking if `TPSs` queue is already created or not.
-
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
+  
 **tps_create()**  
 To create a TPS for the calling thread, we need to get the current thread's tid  
 through function `pthread_self()` and pass it to `queue_iterate()` to check if  
@@ -93,7 +83,6 @@ exists, did not find TPS, etc.
 When finish reading, need to use `mprotect()` with *PROT_NONE* to take back the  
 read permission.  
 
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  
 **tps_write()**  
 We first iterate TPSs queue to find the current TPS to write to.  
 If found, we use `mprotect()` to give the calling thread write permission of TPS  
@@ -127,4 +116,17 @@ exclusion. We enter mutual exclusion before we modify TPS's, queue, or perform
 mmap(), memcpy(), mprotect() operations and etc. We exit critical sections  
 before everytime we return 0 or -1.
 
-## Testing TPS ##  
+## Testing ##  
+We were able to pass all three semaphore testers provided by professor.
+For TPS testing, we were also able to pass the tps.c tester given by professor.  
+We created two additional testers for testing tps protection errors and seg  
+fault, and for testing more complex cases of TPS and error and corner cases.  
+
+### tps_protection.c ###  
+In this tester, we basically followed professor's slides to test for tps  
+protection error by letting same thread accesses its own tps illegally and we  
+were also able to get the expected outputs: 
+```c
+TPS protection error!  
+segmentation fault (core dumped)
+```
